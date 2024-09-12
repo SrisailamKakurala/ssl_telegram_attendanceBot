@@ -17,6 +17,7 @@ ASK_ROLLNO = 1
 
 # Function to check attendance
 def check_attendance(roll):
+    print('entered check_attendance')
     login_data = {
         'token': token,  # Hidden token field
         'username': roll,  # Roll number or username
@@ -30,13 +31,15 @@ def check_attendance(roll):
     if response.status_code != 200:
         raise Exception(f"Failed to log in. Status code: {response.status_code}")
     
-    # with open('test.html', 'w', encoding='utf-8') as file:
-    #     file.write(response.text)  # Write the HTML content, not the response object
+    with open('test.html', 'w', encoding='utf-8') as file:
+        file.write(response.text)  # Write the HTML content, not the response object
+        # print(response.text)
 
     soup = BeautifulSoup(response.text, 'html.parser')
 
     # Find attendance value
-    attendance_element = soup.find('th', class_='text-blue')
+    attendance_element = soup.find('th', class_='text-danger fw-bold')
+    print(attendance_element)
     if attendance_element:
         attendance_value = attendance_element.text.strip()
         return attendance_value
@@ -45,11 +48,15 @@ def check_attendance(roll):
 
 # Start command handler
 async def start(update: Update, context: CallbackContext) -> int:
+    print('entered start')
+    
     await update.message.reply_text("Welcome! Please enter your roll number.")
     return ASK_ROLLNO  # Move to the state where we ask for roll number
 
 # Function to store user's roll number
 async def store_rollno(update: Update, context: CallbackContext) -> int:
+    print('entered store_rollno')
+    
     user_id = update.message.from_user.id
     roll_no = update.message.text.upper()  # Convert roll number to uppercase
 
@@ -60,6 +67,8 @@ async def store_rollno(update: Update, context: CallbackContext) -> int:
 
 # Attendance command handler
 async def attendance(update: Update, context: CallbackContext) -> None:
+    print('entered attendance')
+    
     user_id = update.message.from_user.id
     roll = context.args[0].upper() if context.args else user_roll_numbers.get(user_id)
 
@@ -74,6 +83,8 @@ async def attendance(update: Update, context: CallbackContext) -> None:
         await update.message.reply_text(f"Could not retrieve attendance for {roll}. Error: {e}")
 
 def main():
+    print('entered main')
+    
     application = Application.builder().token("7019335062:AAFS42J4nJOQ-5I7MUSQ_AQ0WdaFnu01HTQ").build()
 
     # Create conversation handler to ask for roll number
