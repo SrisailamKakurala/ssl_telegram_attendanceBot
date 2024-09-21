@@ -26,7 +26,6 @@ ASK_ROLLNO = 1
 # Load analytics data from the file
 def load_analytics():
     if os.path.exists(analytics_file_path):
-        # Check if the file is empty
         if os.path.getsize(analytics_file_path) > 0:
             try:
                 with open(analytics_file_path, 'r') as f:
@@ -36,19 +35,14 @@ def load_analytics():
         else:
             print("Empty file, initializing with default values.")
     
-    # If the file is missing, empty, or corrupted, return default values
     return {"unique_users": set(), "total_users": 0, "total_visits": 0, "route_usage": {}}
 
 # Save analytics data to the file
 def save_analytics(analytics):
-    # Convert set of unique users to a list before saving to JSON (since sets are not JSON serializable)
-    analytics["unique_users"] = list(analytics["unique_users"])
-    
+    analytics["unique_users"] = list(analytics["unique_users"])  # Convert to list for JSON
     with open(analytics_file_path, 'w') as f:
         json.dump(analytics, f, indent=4)
-
-    # Convert the list back to a set after saving
-    analytics["unique_users"] = set(analytics["unique_users"])
+    analytics["unique_users"] = set(analytics["unique_users"])  # Convert back to set after saving
 
 # Log in and save HTML content
 def login(username):
@@ -61,20 +55,17 @@ def login(username):
     
     try:
         response = requests.post(login_url, data=login_data, allow_redirects=True)
-        
         if response.status_code == 200:
             with open(file_path, "w", encoding='utf-8') as file:
                 file.write(response.text)
-        
         else:
             raise Exception(f"Failed to log in. Status code: {response.status_code}")
-    
     except requests.exceptions.RequestException as e:
         raise Exception(f"An error occurred: {e}")
 
 # Check attendance
 def check_attendance(roll):
-    login(roll)  # Log in and save the HTML content
+    login(roll)
     tables = pd.read_html(file_path)
     df = tables[2]
     
@@ -88,12 +79,8 @@ def check_attendance(roll):
 def attendance_history():
     tables = pd.read_html(file_path)
     df = tables[3].fillna("-")
-    
-    # Drop the extra header row by resetting the column headers
     df.columns = df.columns.droplevel(0)
-
-    df_small = df[['Date', 'Total', 'Attend']].head(3)  # Limit to the last 3 rows
-    # Format the history in markdown
+    df_small = df[['Date', 'Total', 'Attend']].head(3)
     history_str = df_small.to_markdown(index=False)
     return history_str
 
@@ -104,7 +91,7 @@ async def start(update: Update, context: CallbackContext) -> int:
     # Update analytics
     analytics = load_analytics()
     if user_id not in analytics["unique_users"]:
-        analytics["unique_users"].add(user_id)
+        analytics["unique_users"].append(user_id)
         analytics["total_users"] += 1
     analytics["total_visits"] += 1
     analytics["route_usage"]["/start"] = analytics["route_usage"].get("/start", 0) + 1
@@ -116,7 +103,7 @@ async def start(update: Update, context: CallbackContext) -> int:
 # Store user's roll number
 async def store_rollno(update: Update, context: CallbackContext) -> int:
     user_id = update.message.from_user.id
-    roll_no = update.message.text.upper()  # Convert roll number to uppercase
+    roll_no = update.message.text.upper()
 
     # Save the roll number for the user
     user_roll_numbers[user_id] = roll_no
@@ -168,7 +155,6 @@ async def history(update: Update, context: CallbackContext) -> None:
 async def analytics(update: Update, context: CallbackContext) -> None:
     analytics = load_analytics()
 
-    # Format and display the analytics data
     analytics["unique_users"] = len(analytics["unique_users"])  # Show the number of unique users
     await update.message.reply_text(
         f"Analytics:\n"
@@ -188,7 +174,7 @@ def main():
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={ASK_ROLLNO: [MessageHandler(filters.TEXT & ~filters.COMMAND, store_rollno)]},
-        fallbacks=[],
+        fallbacks=[CommandHandler('start', start)],
     )
 
     # Add command handlers
