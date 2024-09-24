@@ -75,7 +75,7 @@ def check_attendance(roll):
     except KeyError as e:
         raise Exception(f"KeyError: {e}")
 
-# Attendance history
+# Attendance history after login
 def attendance_history():
     tables = pd.read_html(file_path)
     df = tables[3].fillna("-")
@@ -97,7 +97,7 @@ async def start(update: Update, context: CallbackContext) -> int:
     analytics["route_usage"]["/start"] = analytics["route_usage"].get("/start", 0) + 1
     save_analytics(analytics)
 
-    await update.message.reply_text("Welcome! Please enter your roll number.")
+    await update.message.reply_text("(Bot Updated) \n\n Welcome! Please enter your roll number.")
     return ASK_ROLLNO
 
 # Store user's roll number
@@ -137,9 +137,19 @@ async def attendance(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         await update.message.reply_text(f"Could not retrieve attendance for {roll}. Error: {e}")
 
-# Attendance history command handler
+# Attendance history command handler with login
 async def history(update: Update, context: CallbackContext) -> None:
+    user_id = update.message.from_user.id
+    roll = user_roll_numbers.get(user_id)  # Fetch stored roll number
+
+    if not roll:
+        await update.message.reply_text("Please provide your roll number first using the /start command.")
+        return
+
     try:
+        # Call login to ensure we have the latest data
+        login(roll)
+        
         history_data = attendance_history()
 
         # Update analytics
@@ -147,9 +157,11 @@ async def history(update: Update, context: CallbackContext) -> None:
         analytics["route_usage"]["/history"] = analytics["route_usage"].get("/history", 0) + 1
         save_analytics(analytics)
 
-        await update.message.reply_text(f"Attendance History:\n```\n{history_data}\n```", parse_mode='Markdown')
+        # Send the fetched history as the bot
+        await update.message.reply_text(f"Attendance History for {roll}:\n```\n{history_data}\n```", parse_mode='Markdown')
     except Exception as e:
         await update.message.reply_text(f"Could not retrieve attendance history. Error: {e}")
+
 
 # View analytics command
 async def analytics(update: Update, context: CallbackContext) -> None:
