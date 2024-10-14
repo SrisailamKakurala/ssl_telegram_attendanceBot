@@ -186,23 +186,30 @@ async def verify_password(update: Update, context: CallbackContext) -> int:
         await update.message.reply_text("Incorrect password. Access denied.")
         return ConversationHandler.END
 
-# Send the broadcast message
-async def send_broadcast(update: Update, context: CallbackContext) -> int:
-    message = " ".join(context.args)
+# Send broadcast message
+async def send_broadcast(update: Update, context: CallbackContext) -> None:
+    # Get the actual message text (after /broadcast <password>)
+    message = update.message.text
 
-    if not message:
-        await update.message.reply_text("Please provide a message to broadcast.")
-        return BROADCAST_MESSAGE
+    # Split the message to exclude the "/broadcast <password>" part
+    # Assuming the first part of the message is the command and the second is the password
+    message_parts = message.split(' ', 2)
 
-    # Send the message to all users
+    if len(message_parts) < 3:
+        await update.message.reply_text("No message to broadcast was provided.")
+        return
+
+    broadcast_message = message_parts[2]  # The actual message to broadcast
+
+    # Send the message to all users in the user_roll_numbers dictionary
     for user_id in user_roll_numbers.keys():
         try:
-            await context.bot.send_message(chat_id=user_id, text=message)
+            await context.bot.send_message(chat_id=user_id, text=f"Broadcast message: {broadcast_message}")
         except Exception as e:
-            print(f"Failed to send message to user {user_id}: {e}")
+            print(f"Failed to send message to {user_id}: {e}")
 
-    await update.message.reply_text("Broadcast message sent!")
-    return ConversationHandler.END
+    await update.message.reply_text("Broadcast sent successfully.")
+
 
 # Broadcast command handler
 async def broadcast(update: Update, context: CallbackContext) -> int:
