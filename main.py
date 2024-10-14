@@ -3,7 +3,7 @@ import requests
 import pandas as pd
 import json
 from telegram import Update
-from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext, ConversationHandler
+from telegram.ext import Application, CommandHandler, MessageHandler, filters, CallbackContext
 
 # Dictionary to store user roll numbers
 user_roll_numbers = {}
@@ -20,14 +20,6 @@ token = "MTcyNjEwODg0OTR6TVZGRnJnbHF4R2RIRWFiZ0hxOTU3NWN5Nk1zcXRU"
 # Path to the HTML file
 file_path = './fresh.html'
 
-# Conversation handler states
-ASK_ROLLNO = 1
-ASK_PASSWORD = 2
-BROADCAST_MESSAGE = 3
-
-# Define the correct password for broadcasting
-BROADCAST_PASSWORD = "34bdfa642eo3"  # Replace with your desired password
-
 # Load analytics data from the file
 def load_analytics():
     if os.path.exists(analytics_file_path):
@@ -43,7 +35,6 @@ def load_analytics():
             print("Empty file, initializing with default values.")
     
     return {"unique_users": set(), "total_users": 0, "total_visits": 0, "route_usage": {}}
-
 
 # Save analytics data to the file
 def save_analytics(analytics):
@@ -93,7 +84,7 @@ def attendance_history():
     return history_str
 
 # Start command handler
-async def start(update: Update, context: CallbackContext) -> int:
+async def start(update: Update, context: CallbackContext) -> None:
     user_id = update.message.from_user.id
 
     # Update analytics
@@ -105,24 +96,26 @@ async def start(update: Update, context: CallbackContext) -> int:
     analytics["route_usage"]["/start"] = analytics["route_usage"].get("/start", 0) + 1
     save_analytics(analytics)
 
-    await update.message.reply_text("(Bot Updated) \n\n Welcome! Please enter your roll number.")
-    return ASK_ROLLNO
+    await update.message.reply_text("(Bot Updated) \n\nWelcome! Please enter your roll number.")
+    return
 
 # Store user's roll number
-async def store_rollno(update: Update, context: CallbackContext) -> int:
+async def store_rollno(update: Update, context: CallbackContext) -> None:
     user_id = update.message.from_user.id
     roll_no = update.message.text.upper()
 
     # Save the roll number for the user
     user_roll_numbers[user_id] = roll_no
+    
+    print(user_roll_numbers)
 
     # Update analytics
     analytics = load_analytics()
     analytics["route_usage"]["rollno"] = analytics["route_usage"].get("rollno", 0) + 1
     save_analytics(analytics)
 
-    await update.message.reply_text(f"Roll number saved as {roll_no}. Now use \n 1. /at for total attendance. \n 2. /history for last 3 days attendance. \n 3. /at <rollNo> for others attendance")
-    return ConversationHandler.END
+    await update.message.reply_text(f"Roll number saved as {roll_no}. Now use \n 1. /at for total attendance. \n 2. /history for last 3 days attendance. \n 3. /at <rollNo> for others' attendance.")
+    return
 
 # Attendance command handler
 async def attendance(update: Update, context: CallbackContext) -> None:
@@ -170,53 +163,28 @@ async def history(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         await update.message.reply_text(f"Could not retrieve attendance history. Error: {e}")
 
-# Ask for the password for broadcasting
-async def ask_password(update: Update, context: CallbackContext) -> int:
-    await update.message.reply_text("Please enter the password to broadcast a message.")
-    return ASK_PASSWORD
-
-# Verify the password
-async def verify_password(update: Update, context: CallbackContext) -> int:
-    user_password = update.message.text
-    print(f"User entered password: {user_password}")  # Log user input
-
-    if user_password == BROADCAST_PASSWORD:
-        await update.message.reply_text("Password verified! Please enter the message to broadcast.")
-        print("Password verified.")  # Log success
-        return BROADCAST_MESSAGE
-    else:
-        await update.message.reply_text("Access denied. Incorrect password.")
-        print("Access denied.")  # Log failure
-        return ConversationHandler.END
-
-
-
-# Send broadcast message
-async def send_broadcast(update: Update, context: CallbackContext) -> int:
-    # Get the broadcast message text
-    message = update.message.text
-    print(f"Broadcasting message: {message}")  # Logging
-
-    # Send the message to all users in the user_roll_numbers dictionary
-    for user_id in user_roll_numbers.keys():
-        try:
-            await context.bot.send_message(chat_id=user_id, text=f"Broadcast message: {message}")
-        except Exception as e:
-            print(f"Failed to send message to {user_id}: {e}")
-
-    await update.message.reply_text("Broadcast sent successfully.")
-    return ConversationHandler.END
-
 # Broadcast command handler
-async def broadcast(update: Update, context: CallbackContext) -> int:
-    return await ask_password(update, context)
+async def broadcast(update: Update, context: CallbackContext) -> None:
+    if context.args:
+        message = ' '.join(context.args)  # Join message parts
+
+        # Send the message to all users in the user_roll_numbers dictionary
+        for user_id in user_roll_numbers.keys():
+            try:
+                await context.bot.send_message(chat_id=user_id, text=f"ADMIN: {message}")
+            except Exception as e:
+                print(f"Failed to send message to {user_id}: {e}")
+
+        await update.message.reply_text("Broadcast sent successfully.")
+    else:
+        await update.message.reply_text("Please provide a message to broadcast. Usage: /broadcast <message>")
 
 # View all roll numbers
 async def view_roll_numbers(update: Update, context: CallbackContext) -> None:
     if not user_roll_numbers:
         await update.message.reply_text("No roll numbers registered yet.")
     else:
-        roll_numbers = "\n".join(f"User ID: {user_id}, Roll No: {roll}" for user_id, roll in user_roll_numbers.items())
+        roll_numbers = "\n".join(f"Roll No: {roll}" for user_id, roll in user_roll_numbers.items())
         await update.message.reply_text(f"Registered roll numbers:\n{roll_numbers}")
 
 # View analytics command
@@ -224,38 +192,21 @@ async def analytics(update: Update, context: CallbackContext) -> None:
     analytics = load_analytics()
 
     analytics["unique_users"] = len(analytics["unique_users"])  # Show the number of unique users
-    await update.message.reply_text(
-        f"Analytics:\n"
-        f"Total unique users: {analytics['unique_users']}\n"
-        f"Total users: {analytics['total_users']}\n"
-        f"Total visits: {analytics['total_visits']}\n"
-        f"Route usage: {json.dumps(analytics['route_usage'], indent=4)}"
-    )
+    await update.message.reply_text(f"Analytics:\n{json.dumps(analytics, indent=4)}")
 
 # Main function to run the bot
 def main() -> None:
-    application = Application.builder().token("7019335062:AAFS42J4nJOQ-5I7MUSQ_AQ0WdaFnu01HTQ").build()  # Replace with your bot token
+    application = Application.builder().token('7019335062:AAFS42J4nJOQ-5I7MUSQ_AQ0WdaFnu01HTQ').build()
 
-    # Set up conversation handler
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={
-            ASK_ROLLNO: [MessageHandler(filters.TEXT & ~filters.COMMAND, store_rollno)],
-            ASK_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, verify_password)],
-            BROADCAST_MESSAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, send_broadcast)],
-        },
-        fallbacks=[],
-    )
+    # Add command handlers
+    application.add_handler(CommandHandler('start', start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, store_rollno))
+    application.add_handler(CommandHandler('at', attendance))
+    application.add_handler(CommandHandler('history', history))
+    application.add_handler(CommandHandler('broadcast', broadcast))
+    application.add_handler(CommandHandler('view_roll_numbers', view_roll_numbers))
+    application.add_handler(CommandHandler('analytics', analytics))
 
-    # Register handlers
-    application.add_handler(conv_handler)
-    application.add_handler(CommandHandler("at", attendance))
-    application.add_handler(CommandHandler("history", history))
-    application.add_handler(CommandHandler("broadcast", broadcast))
-    application.add_handler(CommandHandler("view_roll_numbers", view_roll_numbers))
-    application.add_handler(CommandHandler("analytics", analytics))
-
-    # Start the bot
     application.run_polling()
 
 if __name__ == '__main__':
