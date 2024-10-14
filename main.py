@@ -177,15 +177,14 @@ async def ask_password(update: Update, context: CallbackContext) -> int:
 
 # Verify the password
 async def verify_password(update: Update, context: CallbackContext) -> int:
-    password = update.message.text
-    print(f"Entered password: {password}")  # Logging
-
-    if password == BROADCAST_PASSWORD:
+    user_password = update.message.text
+    if user_password == BROADCAST_PASSWORD:
         await update.message.reply_text("Password verified! Please enter the message to broadcast.")
-        return BROADCAST_MESSAGE
+        return BROADCAST_MESSAGE  # Move to the next state to accept the broadcast message
     else:
-        await update.message.reply_text("Incorrect password. Access denied.")
+        await update.message.reply_text("Access denied. Incorrect password.")
         return ConversationHandler.END
+
 
 # Send broadcast message
 async def send_broadcast(update: Update, context: CallbackContext) -> int:
@@ -225,14 +224,14 @@ async def analytics(update: Update, context: CallbackContext) -> None:
         f"Total unique users: {analytics['unique_users']}\n"
         f"Total users: {analytics['total_users']}\n"
         f"Total visits: {analytics['total_visits']}\n"
-        f"Route usage: {json.dumps(analytics['route_usage'], indent=2)}"
+        f"Route usage: {json.dumps(analytics['route_usage'], indent=4)}"
     )
 
-# Main function
+# Main function to run the bot
 def main() -> None:
-    app = Application.builder().token("7019335062:AAFS42J4nJOQ-5I7MUSQ_AQ0WdaFnu01HTQ").build()
+    application = Application.builder().token("7019335062:AAFS42J4nJOQ-5I7MUSQ_AQ0WdaFnu01HTQ").build()  # Replace with your bot token
 
-    # Conversation handler for roll number
+    # Set up conversation handler
     conv_handler = ConversationHandler(
         entry_points=[CommandHandler("start", start)],
         states={
@@ -244,15 +243,15 @@ def main() -> None:
     )
 
     # Register handlers
-    app.add_handler(conv_handler)
-    app.add_handler(CommandHandler("at", attendance))
-    app.add_handler(CommandHandler("history", history))
-    app.add_handler(CommandHandler("broadcast", broadcast))
-    app.add_handler(CommandHandler("view_rolls", view_roll_numbers))
-    app.add_handler(CommandHandler("analytics", analytics))
+    application.add_handler(conv_handler)
+    application.add_handler(CommandHandler("at", attendance))
+    application.add_handler(CommandHandler("history", history))
+    application.add_handler(CommandHandler("broadcast", broadcast))
+    application.add_handler(CommandHandler("view_roll_numbers", view_roll_numbers))
+    application.add_handler(CommandHandler("analytics", analytics))
 
     # Start the bot
-    app.run_polling()
+    application.run_polling()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     main()
