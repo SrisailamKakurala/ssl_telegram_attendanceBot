@@ -230,7 +230,7 @@ async def analytics(update: Update, context: CallbackContext) -> None:
 
 # Main function
 def main() -> None:
-    app = Application.builder().token("YOUR_BOT_TOKEN").build()
+    app = Application.builder().token("7019335062:AAFS42J4nJOQ-5I7MUSQ_AQ0WdaFnu01HTQ").build()
 
     # Conversation handler for roll number
     conv_handler = ConversationHandler(
