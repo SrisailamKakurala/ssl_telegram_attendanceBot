@@ -22,6 +22,11 @@ file_path = './fresh.html'
 
 # Conversation handler states
 ASK_ROLLNO = 1
+ASK_PASSWORD = 2
+BROADCAST_MESSAGE = 3
+
+# Define the correct password for broadcasting
+BROADCAST_PASSWORD = "your_password_here"  # Replace with your desired password
 
 # Load analytics data from the file
 def load_analytics():
@@ -91,7 +96,7 @@ async def start(update: Update, context: CallbackContext) -> int:
     # Update analytics
     analytics = load_analytics()
     if user_id not in analytics["unique_users"]:
-        analytics["unique_users"].append(user_id)
+        analytics["unique_users"].add(user_id)
         analytics["total_users"] += 1
     analytics["total_visits"] += 1
     analytics["route_usage"]["/start"] = analytics["route_usage"].get("/start", 0) + 1
@@ -162,6 +167,44 @@ async def history(update: Update, context: CallbackContext) -> None:
     except Exception as e:
         await update.message.reply_text(f"Could not retrieve attendance history. Error: {e}")
 
+# Ask for the password for broadcasting
+async def ask_password(update: Update, context: CallbackContext) -> int:
+    await update.message.reply_text("Please enter the password to broadcast a message.")
+    return ASK_PASSWORD
+
+# Verify the password
+async def verify_password(update: Update, context: CallbackContext) -> int:
+    password = update.message.text
+
+    if password == BROADCAST_PASSWORD:
+        await update.message.reply_text("Password verified! Please enter the message to broadcast.")
+        return BROADCAST_MESSAGE
+    else:
+        await update.message.reply_text("Incorrect password. Access denied.")
+        return ConversationHandler.END
+
+# Send the broadcast message
+async def send_broadcast(update: Update, context: CallbackContext) -> int:
+    message = " ".join(context.args)
+
+    if not message:
+        await update.message.reply_text("Please provide a message to broadcast.")
+        return BROADCAST_MESSAGE
+
+    # Send the message to all users
+    for user_id in user_roll_numbers.keys():
+        try:
+            await context.bot.send_message(chat_id=user_id, text=message)
+        except Exception as e:
+            print(f"Failed to send message to user {user_id}: {e}")
+
+    await update.message.reply_text("Broadcast message sent!")
+    return ConversationHandler.END
+
+# Broadcast command handler
+async def broadcast(update: Update, context: CallbackContext) -> int:
+    await ask_password(update, context)
+    return ASK_PASSWORD
 
 # View analytics command
 async def analytics(update: Update, context: CallbackContext) -> None:
@@ -189,13 +232,23 @@ def main():
         fallbacks=[CommandHandler('start', start)],
     )
 
-    # Add command handlers
+    # Create a new conversation handler for broadcasting
+    broadcast_handler = ConversationHandler(
+        entry_points=[CommandHandler("broadcast", broadcast)],
+        states={
+            ASK_PASSWORD: [MessageHandler(filters.TEXT & ~filters.COMMAND, verify_password)],
+            BROADCAST_MESSAGE: [MessageHandler(filters.TEXT & ~filters.COMMAND, send_broadcast)],
+        },
+        fallbacks=[CommandHandler('start', start)],
+    )
+
     application.add_handler(conv_handler)
     application.add_handler(CommandHandler("at", attendance))
     application.add_handler(CommandHandler("history", history))
     application.add_handler(CommandHandler("analytics", analytics))
+    application.add_handler(broadcast_handler)
 
     application.run_polling()
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
