@@ -178,12 +178,17 @@ async def ask_password(update: Update, context: CallbackContext) -> int:
 # Verify the password
 async def verify_password(update: Update, context: CallbackContext) -> int:
     user_password = update.message.text
+    print(f"User entered password: {user_password}")  # Log user input
+
     if user_password == BROADCAST_PASSWORD:
         await update.message.reply_text("Password verified! Please enter the message to broadcast.")
-        return BROADCAST_MESSAGE  # Move to the next state to accept the broadcast message
+        print("Password verified.")  # Log success
+        return BROADCAST_MESSAGE
     else:
         await update.message.reply_text("Access denied. Incorrect password.")
+        print("Access denied.")  # Log failure
         return ConversationHandler.END
+
 
 
 # Send broadcast message
