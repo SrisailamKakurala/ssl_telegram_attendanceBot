@@ -34,13 +34,16 @@ def load_analytics():
         if os.path.getsize(analytics_file_path) > 0:
             try:
                 with open(analytics_file_path, 'r') as f:
-                    return json.load(f)
+                    analytics = json.load(f)
+                    analytics["unique_users"] = set(analytics["unique_users"])  # Convert list back to set
+                    return analytics
             except json.JSONDecodeError:
                 print("Corrupted JSON, initializing with default values.")
         else:
             print("Empty file, initializing with default values.")
     
     return {"unique_users": set(), "total_users": 0, "total_visits": 0, "route_usage": {}}
+
 
 # Save analytics data to the file
 def save_analytics(analytics):
