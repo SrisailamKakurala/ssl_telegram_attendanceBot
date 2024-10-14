@@ -178,6 +178,7 @@ async def ask_password(update: Update, context: CallbackContext) -> int:
 # Verify the password
 async def verify_password(update: Update, context: CallbackContext) -> int:
     password = update.message.text
+    print(f"Entered password: {password}")  # Logging
 
     if password == BROADCAST_PASSWORD:
         await update.message.reply_text("Password verified! Please enter the message to broadcast.")
@@ -190,6 +191,7 @@ async def verify_password(update: Update, context: CallbackContext) -> int:
 async def send_broadcast(update: Update, context: CallbackContext) -> int:
     # Get the broadcast message text
     message = update.message.text
+    print(f"Broadcasting message: {message}")  # Logging
 
     # Send the message to all users in the user_roll_numbers dictionary
     for user_id in user_roll_numbers.keys():
@@ -203,8 +205,7 @@ async def send_broadcast(update: Update, context: CallbackContext) -> int:
 
 # Broadcast command handler
 async def broadcast(update: Update, context: CallbackContext) -> int:
-    await ask_password(update, context)
-    return ASK_PASSWORD
+    return await ask_password(update, context)
 
 # View all roll numbers
 async def view_roll_numbers(update: Update, context: CallbackContext) -> None:
@@ -229,7 +230,7 @@ async def analytics(update: Update, context: CallbackContext) -> None:
 
 # Main function
 def main() -> None:
-    app = Application.builder().token("7019335062:AAFS42J4nJOQ-5I7MUSQ_AQ0WdaFnu01HTQ").build()
+    app = Application.builder().token("YOUR_BOT_TOKEN").build()
 
     # Conversation handler for roll number
     conv_handler = ConversationHandler(
