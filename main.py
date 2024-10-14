@@ -26,7 +26,7 @@ ASK_PASSWORD = 2
 BROADCAST_MESSAGE = 3
 
 # Define the correct password for broadcasting
-BROADCAST_PASSWORD = "your_password_here"  # Replace with your desired password
+BROADCAST_PASSWORD = "34bdfa642eo3"  # Replace with your desired password
 
 # Load analytics data from the file
 def load_analytics():
